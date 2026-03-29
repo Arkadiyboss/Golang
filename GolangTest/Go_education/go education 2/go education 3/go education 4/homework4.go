@@ -12,10 +12,10 @@ type Person struct {
 
 func main() {
 	alice := Person{Name: "Alice", Age: 30}
-	fmt.Printf("%s (%d)", alice.Name, alice.Age)
+	fmt.Println(alice)
 	// Ожидаемый вывод: Alice (30)
 }
 
 type Stringer interface {
-    String() string
+    Stringer() string
 }
