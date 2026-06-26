@@ -8,7 +8,6 @@ package main
 
 import (
     "fmt"
-    "math"
 )
 
 // Shape – интерфейс для геометрических фигур
