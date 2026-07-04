@@ -14,12 +14,12 @@ func ReadInfo(name string) string {
 	return string(data)
 }
 
-func WriteInfo(content , name string) string {
+func WriteInfo(content []byte, name string) string {
 	file, err := os.Create(name)
 	if err != nil {
 		fmt.Println("Возникла ошибка", err)
 	}
-	len, err := file.WriteString(content)
+	len, err := file.Write(content)
 	if err != nil {
 		fmt.Println("Возникла ошибка", err)
 	}

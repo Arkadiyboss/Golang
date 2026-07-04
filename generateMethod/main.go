@@ -5,10 +5,42 @@ import (
 	"gov1/account"
 	"gov1/files"
 	"math/rand"
+
 	"github.com/fatih/color"
 )
 
 func main() {
+	fmt.Println("Привет, что ты хочешь сделать?")
+	for {
+		input := getMenu()
+		switch input {
+		case 1:
+			createAccount()
+			Again("Аккаунт успешно создан, хочешь что-то еще?")
+		case 2:
+			account.FindAccout(false)
+			Again("Держи данные от аккаунта")
+		case 3:
+			account.FindAccout(true)
+			Again("Аккаунт успешно удален")
+		case 4:
+			return
+		default:
+			recoverThisShit("Повтори попытку, значение не распознанно")
+		}
+	}
+}
+
+func getMenu() int {
+	var input int
+	fmt.Println("1 если создать аккаунт \n2 если найти аккаунт \n3 если удалить аккаунт \n4 выйти")
+	fmt.Println("Введи нужную тебе цифру")
+	fmt.Scan(&input)
+	fmt.Scanln()
+	return input
+}
+
+func createAccount() {
 	randomLogin, _ := promtData("Введи свой логин - ", 1)
 	_, randomPasswordDlina := promtData("Пароль на сколько символов необходим? - ", 2)
 	randomUrl := promtDataUrl()
@@ -18,9 +50,17 @@ func main() {
 		recoverThisShit(err.Error())
 		return
 	}
-	content := myLogin.Login + myLogin.Password + myLogin.Url
+
+	storage, err := account.NewStorage()
+	storage.AddAccount(*myLogin)
+	data, err := storage.ToBytes()
+
+	if err != nil {
+		recoverThisShit(err.Error())
+		return
+	}
 	fmt.Println("Ваш логин -", myLogin.Login, "Ваш новый пароль -", myLogin.Password, "URL Сайта -", myLogin.Url, "Время создания аккаунта -", myLogin.CreatedAt)
-	files.WriteInfo(content, myLogin.Login)
+	files.WriteInfo(data, "passwordBase.json")
 }
 
 func promtData(promt string, number int) (string, int) {
@@ -45,6 +85,10 @@ func promtDataUrl() string {
 	return site
 }
 
-func recoverThisShit(error string) {
-	fmt.Println(error)
+func recoverThisShit(text string) {
+	color.Red(fmt.Sprint(text))
+}
+
+func Again(text string) {
+	color.Green(fmt.Sprint(text))
 }

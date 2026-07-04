@@ -13,7 +13,13 @@ type UserLogin struct {
 	Password  string `json:"jsonPassword" xml:"xmlPassword"`
 	Url       string `json:"jsonUrl" xml:"xmlUrl"`
 	CreatedAt time.Time `json:"jsonCreatedAt" xml:"xmlCreatedAt"`
-}
+	Yanelox Yanelox
+	}
+
+	type Yanelox struct {
+		Ya string `json:"jsonYa" xml:"xmlYa"`
+		Lox string `json:"jsonLox" xml:"xmlLox"`
+	}
 
 func (acc *UserLogin) generateLoginPassword(n int) string {
 	avaliableSymbols := []string{"a", "b", "c", "d", "1", "2", "3", "4", "5", "!", "@", "#", "$", "%"}
@@ -24,6 +30,7 @@ func (acc *UserLogin) generateLoginPassword(n int) string {
 	}
 	return pass
 }
+
 
 func NewLogin(randomLogin string, randomPasswordDlina int, randomUrl string) (*UserLogin, error) {
 	var accountPassword string
@@ -46,6 +53,17 @@ func NewLogin(randomLogin string, randomPasswordDlina int, randomUrl string) (*U
 		Password:  accountPassword,
 		Url:       randomUrl,
 		CreatedAt: time.Now(),
+		Yanelox: Yanelox{
+			Ya: "yanelox100procentov",
+			Lox: "etoNeYa",
+		},
 	}, nil
 
+}
+
+func FindAccout(delete bool) {
+	var inputLogin string
+	fmt.Println("Введите логин аккаунта")
+	fmt.Scan(&inputLogin)
+	fmt.Scanln()
 }
