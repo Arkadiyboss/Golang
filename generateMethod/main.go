@@ -9,24 +9,39 @@ import (
 	"github.com/fatih/color"
 )
 
+var storage *account.Storage
+
 func main() {
 	fmt.Println("Привет, что ты хочешь сделать?")
+	storage, err := account.NewStorage()
+	if err != nil {
+				RecoverThisShit(err.Error())
+				return
+			}
 	for {
 		input := getMenu()
 		switch input {
 		case 1:
 			createAccount()
-			Again("Аккаунт успешно создан, хочешь что-то еще?")
+			Again("Аккаунт успешно создан, хочешь что-то еще?", nil)
 		case 2:
-			account.FindAccout(false)
-			Again("Держи данные от аккаунта")
+			FindAccounts, err := storage.FindAccount(false)
+			if err != nil {
+				RecoverThisShit(err.Error())
+				return
+			}
+			Again("Держи данные от аккаунта", FindAccounts)
 		case 3:
-			account.FindAccout(true)
-			Again("Аккаунт успешно удален")
+			FindAccounts, err := storage.FindAccount(true)
+			if err != nil {
+				RecoverThisShit(err.Error())
+				return
+			}
+			Again("Держи данные от аккаунта", FindAccounts)
 		case 4:
 			return
 		default:
-			recoverThisShit("Повтори попытку, значение не распознанно")
+			RecoverThisShit("Повтори попытку, значение не распознанно")
 		}
 	}
 }
@@ -47,7 +62,7 @@ func createAccount() {
 
 	myLogin, err := account.NewLogin(randomLogin, randomPasswordDlina, randomUrl)
 	if err != nil {
-		recoverThisShit(err.Error())
+		RecoverThisShit(err.Error())
 		return
 	}
 
@@ -56,7 +71,7 @@ func createAccount() {
 	data, err := storage.ToBytes()
 
 	if err != nil {
-		recoverThisShit(err.Error())
+		RecoverThisShit(err.Error())
 		return
 	}
 	fmt.Println("Ваш логин -", myLogin.Login, "Ваш новый пароль -", myLogin.Password, "URL Сайта -", myLogin.Url, "Время создания аккаунта -", myLogin.CreatedAt)
@@ -85,10 +100,13 @@ func promtDataUrl() string {
 	return site
 }
 
-func recoverThisShit(text string) {
+func RecoverThisShit(text string) {
 	color.Red(fmt.Sprint(text))
 }
 
-func Again(text string) {
+func Again(text string, sss *account.Storage) {
 	color.Green(fmt.Sprint(text))
+	if sss != nil {
+		color.Cyan(fmt.Sprint(sss))
+	}
 }

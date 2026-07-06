@@ -60,10 +60,3 @@ func NewLogin(randomLogin string, randomPasswordDlina int, randomUrl string) (*U
 	}, nil
 
 }
-
-func FindAccout(delete bool) {
-	var inputLogin string
-	fmt.Println("Введите логин аккаунта")
-	fmt.Scan(&inputLogin)
-	fmt.Scanln()
-}
