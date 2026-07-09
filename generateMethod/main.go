@@ -9,15 +9,17 @@ import (
 	"github.com/fatih/color"
 )
 
-var storage *account.Storage
+
+var storage *account.StorageWithDb
+ 
 
 func main() {
 	fmt.Println("Привет, что ты хочешь сделать?")
-	storage, err := account.NewStorage()
+	storage, err := account.NewStorage(files.NewJsonDb("passwordBase.json"))
 	if err != nil {
-				RecoverThisShit(err.Error())
-				return
-			}
+		RecoverThisShit(err.Error())
+		return
+	}
 	for {
 		input := getMenu()
 		switch input {
@@ -65,17 +67,17 @@ func createAccount() {
 		RecoverThisShit(err.Error())
 		return
 	}
-
-	storage, err := account.NewStorage()
-	storage.AddAccount(*myLogin)
+	storage, err := account.NewStorage(files.NewJsonDb("passwordBase.json"))
+	storage.Storage.AddAccount(*myLogin)
 	data, err := storage.ToBytes()
 
 	if err != nil {
 		RecoverThisShit(err.Error())
 		return
 	}
+	db := files.NewJsonDb("passwordBase.json")
 	fmt.Println("Ваш логин -", myLogin.Login, "Ваш новый пароль -", myLogin.Password, "URL Сайта -", myLogin.Url, "Время создания аккаунта -", myLogin.CreatedAt)
-	files.WriteInfo(data, "passwordBase.json")
+	db.Write(data)
 }
 
 func promtData(promt string, number int) (string, int) {
@@ -104,9 +106,20 @@ func RecoverThisShit(text string) {
 	color.Red(fmt.Sprint(text))
 }
 
-func Again(text string, sss *account.Storage) {
+func Again(text string, sss *account.StorageWithDb) {
 	color.Green(fmt.Sprint(text))
 	if sss != nil {
 		color.Cyan(fmt.Sprint(sss))
 	}
 }
+
+func MenuList[D any](text []D) {
+	for i, line := range text {
+		if i < len(text) - 1 {
+			fmt.Println(line)
+		} else {
+			fmt.Printf("%v, ", line)
+		}
+	}
+}
+

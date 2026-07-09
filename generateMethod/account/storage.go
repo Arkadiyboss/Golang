@@ -4,21 +4,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"gov1/files"
-	"os"
+	"gov1/output"
 	"strings"
 	"time"
 )
+
+type Db interface {
+	Read() ([]byte, error)
+	Write([]byte) string 
+}
 
 type Storage struct {
 	Accounts    []UserLogin `json:"accounts"`
 	UpdatedTime time.Time   `json:"updatedTime"`
 }
 
-func (acc *Storage) ToBytes() ([]byte, error) {
-	acc.UpdatedTime = time.Now()
+type StorageWithDb struct {
+	Storage Storage `json:"Storage"`
+	Db      Db      `json:"-"`
+}
+
+func (acc *StorageWithDb) ToBytes() ([]byte, error) {
+	acc.Storage.UpdatedTime = time.Now()
 	file, error := json.Marshal(acc)
 	if error != nil {
-		return nil, error
+		output.PrintError(error)
 	}
 	return file, error
 }
@@ -28,15 +38,18 @@ func (newAcc *Storage) AddAccount(acc UserLogin) {
 	newAcc.UpdatedTime = time.Now()
 }
 
-func NewStorage() (*Storage, error) {
-	data, err := os.ReadFile("passwordBase.json")
+func NewStorage(db Db) (*StorageWithDb, error) {
+	data, err := db.Read()
 	if err != nil {
-		return &Storage{
-			Accounts:    []UserLogin{},
-			UpdatedTime: time.Now(),
+		return &StorageWithDb{
+			Storage: Storage{
+				Accounts:    []UserLogin{},
+				UpdatedTime: time.Now(),
+			},
+			Db: db,
 		}, nil
 	}
-	var baobab Storage
+	var baobab StorageWithDb
 	err = json.Unmarshal(data, &baobab)
 	if err != nil {
 		return nil, err
@@ -44,55 +57,59 @@ func NewStorage() (*Storage, error) {
 	return &baobab, nil
 }
 
-func (sss *Storage) FindAccount(delete bool) (*Storage, error) {
+func (sss *StorageWithDb) FindAccount(delete bool) (*StorageWithDb, error) {
 	var inputUrl string
+	db := files.NewJsonDb("passwordBase.json")
 	fmt.Println("Введите URL")
 	fmt.Scan(&inputUrl)
 	fmt.Scanln()
-	data, err := os.ReadFile("passwordBase.json")
+	data, err := db.Read()
 	if err != nil {
 		return nil, err
 	}
-	var eblan Storage
+	var eblan StorageWithDb
 	err = json.Unmarshal(data, &eblan)
 	if err != nil {
 		return nil, err
 	}
 
-	var foundAccount Storage
+	var foundAccount StorageWithDb
 
-	for _, account := range eblan.Accounts {
+	for _, account := range eblan.Storage.Accounts {
 		hit := strings.Contains(account.Url, inputUrl)
 		if hit {
-			foundAccount.Accounts = append(foundAccount.Accounts, account)
+			foundAccount.Storage.Accounts = append(foundAccount.Storage.Accounts, account)
 		}
 	}
-	if len(foundAccount.Accounts) == 0 {
+	if len(foundAccount.Storage.Accounts) == 0 {
 		fmt.Println("Аккаунты не найдены")
-		return &foundAccount, nil
+		return sss, nil
 	}
-	if delete {
+	if delete == true {
 		return eblan.DeleteAccount(&eblan, inputUrl)
 	}
 	return &foundAccount, nil
 }
 
-func (sss *Storage) DeleteAccount(eblan *Storage, inputurl string) (*Storage, error) {
+func (sss *StorageWithDb) DeleteAccount(eblan *StorageWithDb, inputurl string) (*StorageWithDb, error) {
 
-	var newEblan Storage
+	var newEblan StorageWithDb
 
-	for index, account := range eblan.Accounts {
+	for index, account := range eblan.Storage.Accounts {
 		hit := strings.Contains(account.Url, inputurl)
 		if hit != true {
-			newEblan.Accounts = append(newEblan.Accounts, eblan.Accounts[index])
+			newEblan.Storage.Accounts = append(newEblan.Storage.Accounts, eblan.Storage.Accounts[index])
 		}
 	}
-	if newEblan.Accounts != nil {
+	if len(newEblan.Storage.Accounts) > 0 {
 		data, err := newEblan.ToBytes()
 		if err != nil {
 			return nil, err
 		}
-		files.WriteInfo(data, "passwordBase.json")
+		db := files.NewJsonDb("passwordBase.json")
+		db.Write(data)
+	} else {
+		fmt.Println("Аккаунт не найден")
 	}
 	fmt.Println("Данные аккаунта удалены, оставшие аккаунты в списке")
 	return &newEblan, nil
