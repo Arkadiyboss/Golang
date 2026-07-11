@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"http/geo"
 	"http/weather"
-	"time"
 )
 
 type Location struct {
@@ -15,20 +14,47 @@ func main() {
 
 	fmt.Println("Привет эта программа поможет тебе узнать погоду в выбранном городе")
 
-	cityData := InputData[string]("Введите ваш город, на английском языке")
+	for {
 
-	formatNumber := InputData[int]("Введите формат отображения, введи от 1 до 4")
+		cityData := InputData[string]("Введите ваш город, на английском языке, или 1 если хочешь чтобы мы определили")
 
-	userTemper, err := weather.Temper(geo.Location{City: cityData}, formatNumber)
+		var getCity *geo.Location
 
-	if err != nil {
-		fmt.Println(err)
-		return
+		if cityData == "1" {
+			getCity, _ = geo.GetLocation(cityData)
+		}
+
+		if cityData == "" {
+			InputData[string]("Повтори ввод, город не распознан")
+		} else {
+			check := geo.CityValidate(cityData)
+			if check == true {
+				InputData[string]("Повтори ввод, город не распознан44444444444")
+			}
+		}
+
+		formatNumber := InputData[int]("Введите формат отображения, введи от 1 до 4")
+
+		userTemper, err := weather.Temper(geo.Location{City: cityData}, formatNumber)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		if cityData == "" {
+			fmt.Println("Город пользователя ", string(userTemper.Location.City), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
+		} else {
+			fmt.Println("Город пользователя ", string(getCity.City), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
+
+		}
+
+		again := InputData[int]("Хочешь еще раз? 1 - Да, 2 - Нет")
+
+		if again == 2 {
+			return
+		}
 	}
-
-	fmt.Println("Город пользователя ", userTemper.Location, "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
-
-	time.Sleep(5 * time.Second)
 }
 
 func InputData[T string | int](text string) T {
