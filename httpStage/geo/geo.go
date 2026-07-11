@@ -14,7 +14,7 @@ type Location struct {
 }
 
 type respJson struct {
-	error bool `json:"error"`
+	Error bool `json:"error"`
 }
 
 func GetLocation(city string) (*Location, error) {
@@ -71,9 +71,5 @@ func CityValidate(city string) bool {
 	json.Unmarshal(body, &response)
 
 
-	if response.error != true {
-		return false
-	}
-
-	return true
+	return response.Error
 }

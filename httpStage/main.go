@@ -22,35 +22,32 @@ func main() {
 
 		if cityData == "1" {
 			getCity, _ = geo.GetLocation(cityData)
-		}
+			cityData = getCity.City
+			fmt.Println("Город определен: ", cityData)
+			formatNumber := InputData[int]("Введите формат отображения, введи от 1 до 4")
+			userTemper, err := weather.Temper(geo.Location{City: cityData}, formatNumber)
 
-		if cityData == "" {
-			InputData[string]("Повтори ввод, город не распознан")
-		} else {
-			check := geo.CityValidate(cityData)
-			if check == true {
-				InputData[string]("Повтори ввод, город не распознан44444444444")
+			if err != nil {
+				fmt.Println(err)
+				return
 			}
-		}
 
-		formatNumber := InputData[int]("Введите формат отображения, введи от 1 до 4")
+			fmt.Println("Город пользователя ", string(cityData), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
 
-		userTemper, err := weather.Temper(geo.Location{City: cityData}, formatNumber)
-
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		if cityData == "" {
-			fmt.Println("Город пользователя ", string(userTemper.Location.City), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
 		} else {
-			fmt.Println("Город пользователя ", string(getCity.City), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
+			formatNumber := InputData[int]("Введите формат отображения, введи от 1 до 4")
+			userTemper, err := weather.Temper(geo.Location{City: cityData}, formatNumber)
+
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fmt.Println("Город пользователя ", string(cityData), "\nПогода в городе пользователя ", userTemper.Weather, "Дата и время обновления ", userTemper.UpdateTime)
 
 		}
 
 		again := InputData[int]("Хочешь еще раз? 1 - Да, 2 - Нет")
-
 		if again == 2 {
 			return
 		}
