@@ -31,16 +31,20 @@ func NewGrandFather(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool) {
 
 	if err != nil {
 		http.Error(w, "Ошибка парсинга входящих данных", 500)
+		return
 	}
 
 	if request.Name == "" {
 		http.Error(w, "Body.name не прошел валидацию", 400)
+		return
 	}
 	if request.SecondName == "" {
 		http.Error(w, "Body не прошел валидацию", 400)
+		return
 	}
-	if request.Age < 1 {
+	if request.Age <= 1 {
 		http.Error(w, "Body.age не прошел валидацию", 400)
+		return
 	}
 
 	query := `INSERT INTO "grandFather" (name, "secondName", age) VALUES ($1, $2, $3) RETURNING id`
