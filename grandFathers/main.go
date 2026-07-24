@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"grandFather/auth"
 	"grandFather/database"
 	findInfo "grandFather/findInfo/findExactInfo"
 	newEntity "grandFather/newEntity"
@@ -20,18 +21,18 @@ type FindRequestSlots struct {
 
 type NewGrandFather struct {
 	NameSecondName NewNameSecondName `json:"NameSecondName"`
-	Age        int    `json:"age"`
+	Age            int               `json:"age"`
 }
 
 type NewGuardian struct {
 	NameSecondName NewNameSecondName `json:"NameSecondName"`
-	PhoneNumber        int    `json:"phoneNumber"`
+	PhoneNumber    int               `json:"phoneNumber"`
 }
 
 type NewEmployee struct {
 	NameSecondName NewNameSecondName `json:"NameSecondName"`
-	PhoneNumber        int    `json:"phoneNumber"`
-	Post string `json:"post"`
+	PhoneNumber    int               `json:"phoneNumber"`
+	Post           string            `json:"post"`
 }
 
 type NewSlots struct {
@@ -46,6 +47,12 @@ type NewSlots struct {
 type NewNameSecondName struct {
 	Name       string `json:"name"`
 	SecondName string `json:"secondName"`
+}
+
+type NewUser struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 func DeleteInfo(w http.ResponseWriter, r *http.Request) {
@@ -77,8 +84,13 @@ func main() {
 	http.HandleFunc("/newSlots", func(w http.ResponseWriter, r *http.Request) {
 		newEntity.NewEntity(w, r, pool, 4)
 	})
-
-
+	http.HandleFunc("/newUser", func(w http.ResponseWriter, r *http.Request) {
+		auth.NewUser(w, r, pool)
+	})
+	http.HandleFunc("/newUpdateToken", func(w http.ResponseWriter, r *http.Request) {
+		auth.NewUpdatedToken(w, r, pool)
+	})
+	
 
 	http.HandleFunc("/findGrandFather", func(w http.ResponseWriter, r *http.Request) {
 		findInfo.FindInfo(w, r, pool, 1)
@@ -92,8 +104,6 @@ func main() {
 	http.HandleFunc("/findSlots", func(w http.ResponseWriter, r *http.Request) {
 		findInfo.FindInfo(w, r, pool, 4)
 	})
-
-
 
 	http.HandleFunc("/allGrandFathers", func(w http.ResponseWriter, r *http.Request) {
 		findInfo.FindAllInfo(w, r, pool, 1)

@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	findInfo "grandFather/findInfo/findExactInfo"
+	"grandFather/auth"
+	duplicateMethod "grandFather/duplicate"
+	"grandFather/respondMethod"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,9 +26,27 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+
+	IsTokenOk, err := auth.CheckToken(authHeader, p)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			http.Error(w, "Токен не найден", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка проверки токена: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if IsTokenOk != true {
+		http.Error(w, "Ошибка, токен не действителен", 400)
+		return
+	}
+
 	var request map[string]interface{}
 
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err = json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
 		http.Error(w, "Ошибка парсинга входящих данных", 500)
@@ -51,7 +72,8 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 
 		age := int(FloatAge)
 
-		DbDuplicate, DuplicateId := Duplicate(w, p, request, number)
+		duplicateMethod.Duplicate(w, p, request, number)
+		DbDuplicate, DuplicateId := duplicateMethod.Duplicate(w, p, request, number)
 		DuplicateText := "Ошибка создания сущности, уже существует с ID: " + fmt.Sprint(DuplicateId)
 
 		if DbDuplicate {
@@ -59,7 +81,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 			return
 		}
 
-		query := `INSERT INTO "grandFather" (name, "secondName", age) VALUES ($1, $2, $3) RETURNING id`
+		query := `INSERT INTO "resident" (name, "secondName", age) VALUES ($1, $2, $3) RETURNING id`
 
 		var Respond Respond
 		err = p.QueryRow(
@@ -76,7 +98,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 			return
 		}
 
-		findInfo.SendRespond(w, r, Respond)
+		respondMethod.SendRespond(w, r, Respond)
 
 	case 2:
 		if name, ok := request["name"].(string); !ok || name == "" {
@@ -96,7 +118,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 
 		intPhoneNumber := int(phoneNumber)
 
-		DbDuplicate, DuplicateId := Duplicate(w, p, request, number)
+		DbDuplicate, DuplicateId := duplicateMethod.Duplicate(w, p, request, number)
 		DuplicateText := "Ошибка создания сущности, уже существует с ID: " + fmt.Sprint(DuplicateId)
 
 		if DbDuplicate {
@@ -121,7 +143,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 			return
 		}
 
-		findInfo.SendRespond(w, r, Respond)
+		respondMethod.SendRespond(w, r, Respond)
 
 	case 3:
 		if name, ok := request["name"].(string); !ok || name == "" {
@@ -146,7 +168,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 
 		intPhoneNumber := int(phoneNumber)
 
-		DbDuplicate, DuplicateId := Duplicate(w, p, request, number)
+		DbDuplicate, DuplicateId := duplicateMethod.Duplicate(w, p, request, number)
 		DuplicateText := "Ошибка создания сущности, уже существует с ID: " + fmt.Sprint(DuplicateId)
 
 		if DbDuplicate {
@@ -172,7 +194,7 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 			return
 		}
 
-		findInfo.SendRespond(w, r, Respond)
+		respondMethod.SendRespond(w, r, Respond)
 
 	case 4:
 
@@ -192,44 +214,43 @@ func NewEntity(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number i
 
 		intCost := int(cost)
 
-var dateIn pgtype.Date
-err := dateIn.Scan(request["dateIn"])
-if err != nil {
-    http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
-    return
-}
+		var dateIn pgtype.Date
+		err := dateIn.Scan(request["dateIn"])
+		if err != nil {
+			http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
+			return
+		}
 
-if !dateIn.Valid {
-    http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
-    return
-}
+		if !dateIn.Valid {
+			http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
+			return
+		}
 
-today := time.Now().Format("2006-01-02")
-todayDate, _ := time.Parse("2006-01-02", today)
+		today := time.Now().Format("2006-01-02")
+		todayDate, _ := time.Parse("2006-01-02", today)
 
-if dateIn.Time.Before(todayDate) {
-    http.Error(w, "Body.dateIn не может быть в прошлом", http.StatusBadRequest)
-    return
-}
+		if dateIn.Time.Before(todayDate) {
+			http.Error(w, "Body.dateIn не может быть в прошлом", http.StatusBadRequest)
+			return
+		}
 
-var dateOut pgtype.Date
-err = dateOut.Scan(request["dateOut"])
-if err != nil {
-    http.Error(w, "Body.dateOut не прошел валидацию", http.StatusBadRequest)
-    return
-}
+		var dateOut pgtype.Date
+		err = dateOut.Scan(request["dateOut"])
+		if err != nil {
+			http.Error(w, "Body.dateOut не прошел валидацию", http.StatusBadRequest)
+			return
+		}
 
-if !dateOut.Valid {
-    http.Error(w, "Body.dateOut не прошел валидацию", http.StatusBadRequest)
-    return
-}
+		if !dateOut.Valid {
+			http.Error(w, "Body.dateOut не прошел валидацию", http.StatusBadRequest)
+			return
+		}
 
-
-if dateIn.Time.Before(dateIn.Time) {
-	fmt.Println(dateIn.Time)
-    http.Error(w, "Body.dateOut не прошел валидацию, дата заезда не должна быть больше даты выезда", http.StatusBadRequest)
-    return
-}
+		if dateIn.Time.Before(dateIn.Time) {
+			fmt.Println(dateIn.Time)
+			http.Error(w, "Body.dateOut не прошел валидацию, дата заезда не должна быть больше даты выезда", http.StatusBadRequest)
+			return
+		}
 
 		GrandFatherId, ok := request["grandFatherId"].(float64)
 		if !ok {
@@ -247,7 +268,7 @@ if dateIn.Time.Before(dateIn.Time) {
 
 		IntNursingHouseId := int(NursingHouseId)
 
-		DbDuplicate, DuplicateId := Duplicate(w, p, request, number)
+		DbDuplicate, DuplicateId := duplicateMethod.Duplicate(w, p, request, number)
 		DuplicateText := "Ошибка создания сущности, уже существует с ID: " + fmt.Sprint(DuplicateId)
 
 		if DbDuplicate {
@@ -275,82 +296,8 @@ if dateIn.Time.Before(dateIn.Time) {
 			return
 		}
 
-		findInfo.SendRespond(w, r, Respond)
+		respondMethod.SendRespond(w, r, Respond)
 
 	}
 
-}
-
-func Duplicate(w http.ResponseWriter, p *pgxpool.Pool, request map[string]interface{}, number int) (bool, int) {
-
-	switch number {
-	case 1:
-		age, _ := request["age"].(float64)
-
-		IntAge := int(age)
-
-		query := `SELECT id FROM "grandFather" WHERE "name" = $1 AND "secondName" = $2 AND age = $3`
-		var id int
-		err := p.QueryRow(
-			context.Background(),
-			query,
-			request["name"],
-			request["secondName"],
-			IntAge,
-		).Scan(&id)
-
-		if err == nil {
-			return true, id
-		}
-		return false, 0
-	case 2:
-		query := `SELECT id FROM "guardian" WHERE name = $1 AND "secondName" = $2 AND "phoneNumber" = $3`
-		var id int
-		err := p.QueryRow(
-			context.Background(),
-			query,
-			request["name"],
-			request["secondName"],
-			request["phoneNumber"],
-		).Scan(&id)
-		if err == nil {
-			return true, id
-		}
-		return false, 0
-	case 3:
-		query := `SELECT id FROM "employee" WHERE name = $1 AND "secondName" = $2 AND "phoneNumber" = $3 AND "post" = $4`
-		var id int
-		err := p.QueryRow(
-			context.Background(),
-			query,
-			request["name"],
-			request["secondName"],
-			request["phoneNumber"],
-			request["post"],
-		).Scan(&id)
-
-		if err == nil {
-			return true, id
-		}
-		return false, 0
-	case 4:
-		query := `SELECT id FROM "slots" WHERE room = $1 AND "cost" = $2 AND "dateIn" = $3 AND "dateOut" = $4 AND "grandFather_id" = $5 AND "nursingHouse_id" = $6`
-		var id int
-		err := p.QueryRow(
-			context.Background(),
-			query,
-			request["room"],
-			request["cost"],
-			request["dateIn"],
-			request["dateOut"],
-			request["grandFatherId"],
-			request["nursingHouseId"],
-		).Scan(&id)
-		if err == nil {
-			return true, id
-		}
-		return false, 0
-	default:
-		return false, 0
-	}
 }

@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"grandFather/auth"
+	"grandFather/respondMethod"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,7 +18,7 @@ type FindRespond struct {
 	Value []any `json:"value"`
 }
 
-type FindRespondFathers struct {
+type FindRespondResident struct {
 	Id          int         `json:"id"`
 	MedInfo_id  pgtype.Int4 `json:"medInfo_id"`
 	Guardian_id pgtype.Int4 `json:"guardian_id"`
@@ -63,7 +66,25 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 
 	var request map[string]interface{}
 
-	err := json.NewDecoder(r.Body).Decode(&request)
+	authHeader := r.Header.Get("Authorization")
+
+	IsTokenOk, err := auth.CheckToken(authHeader, p)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			http.Error(w, "Токен не найден", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка проверки токена: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if IsTokenOk != true {
+		http.Error(w, "Ошибка, токен не действителен", 400)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
 		http.Error(w, "Ошибка парсинга входящих данных", 500)
@@ -90,8 +111,8 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 
 	switch number {
 	case 1:
-		query := `SELECT * FROM "grandFather" WHERE name = $1 AND "secondName" = $2`
-		var respond FindRespondFathers
+		query := `SELECT * FROM "resident" WHERE name = $1 AND "secondName" = $2`
+		var respond FindRespondResident
 		err = p.QueryRow(
 			context.Background(),
 			query,
@@ -106,12 +127,12 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 			&respond.PhoneNumber,
 			&respond.Status,
 			&respond.CreatedAt)
-			if err != nil {
-		http.Error(w, "Пользователь не найден, FindRespondFather", 500)
-		fmt.Println(err)
-		return
-	}
-			SendRespond(w, r, respond)
+		if err != nil {
+			http.Error(w, "Пользователь не найден, FindRespondFather", 500)
+			fmt.Println(err)
+			return
+		}
+		respondMethod.SendRespond(w, r, respond)
 	case 2:
 		query := `SELECT * FROM "guardian" WHERE name = $1 AND "secondName" = $2`
 		var respond FindRespondGuardianInfo
@@ -124,12 +145,12 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 			&respond.Name,
 			&respond.SecondName,
 			&respond.PhoneNumber)
-			if err != nil {
-		http.Error(w, "Пользователь не найден, FindRespondGuardianInfo", 500)
-		fmt.Println(err)
-		return
-	}
-			SendRespond(w, r, respond)
+		if err != nil {
+			http.Error(w, "Пользователь не найден, FindRespondGuardianInfo", 500)
+			fmt.Println(err)
+			return
+		}
+		respondMethod.SendRespond(w, r, respond)
 	case 3:
 		query := `SELECT * FROM "employee" WHERE name = $1 AND "secondName" = $2`
 		var respond FindRespondEmployee
@@ -144,26 +165,26 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 			&respond.PhoneNumber,
 			&respond.Post,
 			&respond.Change)
-			if err != nil {
-		http.Error(w, "Пользователь не найден, FindRespondEmployee", 500)
-		fmt.Println(err)
-		return
-	}
-			SendRespond(w, r, respond)
+		if err != nil {
+			http.Error(w, "Пользователь не найден, FindRespondEmployee", 500)
+			fmt.Println(err)
+			return
+		}
+		respondMethod.SendRespond(w, r, respond)
 	case 4:
 
 		dateInStr, ok := request["dateIn"].(string)
-    if !ok || dateInStr == "" {
-        http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
-        return
-    }
+		if !ok || dateInStr == "" {
+			http.Error(w, "Body.dateIn не прошел валидацию", http.StatusBadRequest)
+			return
+		}
 
 		dateIn, err := time.Parse("2006-01-02", dateInStr)
 
-    if err != nil {
-        http.Error(w, "Body.dateIn должен быть в формате YYYY-MM-DD", http.StatusBadRequest)
-        return
-    }
+		if err != nil {
+			http.Error(w, "Body.dateIn должен быть в формате YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
 		query := `SELECT * FROM "slots" WHERE "dateIn" <= $1`
 		var respond FindRespondSlots
 		err = p.QueryRow(
@@ -178,16 +199,15 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 			&respond.GrandFatherId,
 			&respond.EmployeeId,
 			&respond.NursingHouseId)
-			if err != nil {
-		http.Error(w, "Слоты не найден, укажите другую дату заезда, FindRespondSlots", 500)
-		fmt.Println(err)
-		return
-	}
-			SendRespond(w, r, respond)
+		if err != nil {
+			http.Error(w, "Слоты не найден, укажите другую дату заезда, FindRespondSlots", 500)
+			fmt.Println(err)
+			return
+		}
+		respondMethod.SendRespond(w, r, respond)
 	}
 
 }
-
 
 func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number int) {
 
@@ -196,9 +216,27 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+
+	IsTokenOk, err := auth.CheckToken(authHeader, p)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			http.Error(w, "Токен не найден", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка проверки токена: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if IsTokenOk != true {
+		http.Error(w, "Ошибка, токен не действителен", 400)
+		return
+	}
+
 	switch number {
 	case 1:
-		query := `SELECT * FROM "grandFather"`
+		query := `SELECT * FROM "resident"`
 
 		rows, err := p.Query(
 			context.Background(),
@@ -209,10 +247,10 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 			return
 		}
 		defer rows.Close()
-		var results []FindRespondFathers
+		var results []FindRespondResident
 
 		for rows.Next() {
-			var respond FindRespondFathers
+			var respond FindRespondResident
 			err := rows.Scan(
 				&respond.Id,
 				&respond.MedInfo_id,
@@ -226,12 +264,12 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 			)
 			results = append(results, respond)
 			if err != nil {
-		http.Error(w, "Пользователи не найдены, FindRespondFathers", 500)
-		fmt.Println(err)
-		return
-	}
+				http.Error(w, "Пользователи не найдены, FindRespondResident", 500)
+				fmt.Println(err)
+				return
+			}
 		}
-		SendRespond(w, r, results)
+		respondMethod.SendRespond(w, r, results)
 	case 2:
 		query := `SELECT * FROM "guardian"`
 
@@ -256,13 +294,13 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 			)
 			results = append(results, respond)
 			if err != nil {
-		http.Error(w, "Пользователи не найдены, FindRespondGuardiansInfo", 500)
-		fmt.Println(err)
-		return
-	}
+				http.Error(w, "Пользователи не найдены, FindRespondGuardiansInfo", 500)
+				fmt.Println(err)
+				return
+			}
 		}
-		SendRespond(w, r, results)
-		case 3:
+		respondMethod.SendRespond(w, r, results)
+	case 3:
 		query := `SELECT * FROM "employee"`
 
 		rows, err := p.Query(
@@ -288,14 +326,14 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 			)
 			results = append(results, respond)
 			if err != nil {
-		http.Error(w, "Пользователи не найдены, FindRespondEmployee", 500)
-		fmt.Println(err)
-		return
-	}
-			
+				http.Error(w, "Пользователи не найдены, FindRespondEmployee", 500)
+				fmt.Println(err)
+				return
+			}
+
 		}
-		SendRespond(w, r, results)
-		case 4:
+		respondMethod.SendRespond(w, r, results)
+	case 4:
 		query := `SELECT * FROM "slots"`
 
 		rows, err := p.Query(
@@ -323,19 +361,11 @@ func FindAllInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number
 			)
 			results = append(results, respond)
 			if err != nil {
-		http.Error(w, "Пользователи не найдены, FindRespondSlots", 500)
-		fmt.Println(err)
-		return
-	}
+				http.Error(w, "Пользователи не найдены, FindRespondSlots", 500)
+				fmt.Println(err)
+				return
+			}
 		}
-		SendRespond(w, r, results)
+		respondMethod.SendRespond(w, r, results)
 	}
-}
-
-func SendRespond(w http.ResponseWriter, r *http.Request, respond any) {
-
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(respond)
 }
