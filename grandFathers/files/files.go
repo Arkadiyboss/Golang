@@ -12,12 +12,11 @@ func WriteLog(content []byte) bool {
 		fmt.Println("Возникла ошибка")
 		return false
 	}
-	len, err := file.Write(content)
+	_, err = file.Write(content)
 	defer file.Close()
 	if err != nil {
 		fmt.Println("Возникла ошибка")
 		return false
 	}
-	fmt.Println(len)
 	return true
 }

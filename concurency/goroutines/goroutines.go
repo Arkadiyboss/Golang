@@ -1,5 +1,4 @@
-package main
-
+package goroutines
 import (
 	"fmt"
 	"io"
@@ -21,7 +20,6 @@ func PingPong(w io.Writer) {
 
 	wg.Wait()
 	close(ch)
-	fmt.Println("Все горутины закончили работу")
 	// TODO: реализовать обмен сообщениями между горутинами
 }
 

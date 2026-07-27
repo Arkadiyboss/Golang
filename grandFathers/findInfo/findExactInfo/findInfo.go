@@ -80,7 +80,7 @@ func FindInfo(w http.ResponseWriter, r *http.Request, p *pgxpool.Pool, number in
 	}
 
 	if IsTokenOk != true {
-		http.Error(w, "Ошибка, токен не действителен", 400)
+		http.Error(w, "Токен просрочен", 400)
 		return
 	}
 
