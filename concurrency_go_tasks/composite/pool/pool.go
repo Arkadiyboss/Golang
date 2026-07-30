@@ -6,5 +6,19 @@ import _ "sync"
 // и возвращает сумму результатов.
 func RunPool(jobs []int, workers int) int {
 	// TODO: реализовать пул воркеров и сбор результатов
-	return 0
+	var r int
+	ch := make(chan int)
+	for i:=1; i <= workers; i++{
+		go Run(jobs, ch)
+	}
+	r = <- ch
+	return r
+}
+
+func Run(jobs []int, ch chan int) {
+	var value int
+	for _, valueJobs := range jobs {
+		value = value + valueJobs
+	}
+	ch <- value
 }
